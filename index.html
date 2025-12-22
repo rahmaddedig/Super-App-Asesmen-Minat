@@ -1,0 +1,715 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  BookOpen, Briefcase, Calculator, Camera, Heart, PenTool, 
+  ArrowRight, RefreshCcw, CheckCircle, Info, Users, Settings, 
+  Award, BarChart2, LayoutGrid, GraduationCap, Map, ArrowLeft,
+  DollarSign, Brain, Lightbulb, FileText, Printer, Download,
+  TrendingUp, Target
+} from 'lucide-react';
+
+// --- DATA UTAMA (DATABASE) ---
+
+const CATEGORIES = {
+  R: { label: 'Realistic (Praktikal)', icon: <Briefcase />, color: 'bg-red-100 text-red-700', border: 'border-red-500', desc: 'Menyukai aktivitas fisik, bekerja dengan benda/alat, dan lingkungan outdoor.' },
+  I: { label: 'Investigative (Pemikir)', icon: <BookOpen />, color: 'bg-blue-100 text-blue-700', border: 'border-blue-500', desc: 'Menyukai observasi, penelitian, analisis data, dan pemecahan masalah logis.' },
+  A: { label: 'Artistic (Kreatif)', icon: <Camera />, color: 'bg-yellow-100 text-yellow-700', border: 'border-yellow-500', desc: 'Menyukai kebebasan ekspresi, seni, intuisi, dan situasi tidak terstruktur.' },
+  S: { label: 'Social (Penolong)', icon: <Heart />, color: 'bg-green-100 text-green-700', border: 'border-green-500', desc: 'Menyukai interaksi dengan orang lain untuk membantu, mengajar, atau melayani.' },
+  E: { label: 'Enterprising (Penggerak)', icon: <ArrowRight />, color: 'bg-purple-100 text-purple-700', border: 'border-purple-500', desc: 'Menyukai memimpin, memengaruhi orang lain, dan berorientasi pada target/bisnis.' },
+  C: { label: 'Conventional (Terorganisir)', icon: <Calculator />, color: 'bg-gray-100 text-gray-700', border: 'border-gray-500', desc: 'Menyukai keteraturan, data detail, administrasi, dan mengikuti prosedur jelas.' }
+};
+
+// Rekomendasi SMA disesuaikan dengan Kurikulum Merdeka (Mapel Pilihan)
+const RECOMMENDATIONS = {
+  R: { sma: 'Fokus Mapel Pilihan: Fisika, Matematika Tingkat Lanjut, Prakarya', smk: 'Teknik Mesin, Otomotif, TKJ, Pertanian, Logistik', kuliah: 'Teknik, Arsitektur Lanskap, Kehutanan, Peternakan' },
+  I: { sma: 'Fokus Mapel Pilihan: Biologi, Kimia, Fisika, Matematika', smk: 'Teknik Kimia, Farmasi, RPL, Analisis Pengujian Lab', kuliah: 'Ilmu Komputer, Kedokteran, MIPA, Psikologi Riset' },
+  A: { sma: 'Fokus Mapel Pilihan: Seni Budaya, Bahasa Asing, Sastra', smk: 'DKV, Tata Busana, Seni Musik/Tari, Broadcasting, Animasi', kuliah: 'Desain Grafis, Sastra, Seni Rupa, Film & TV, Arsitektur' },
+  S: { sma: 'Fokus Mapel Pilihan: Sosiologi, Antropologi, Bahasa', smk: 'Keperawatan, Pekerjaan Sosial, Pariwisata, Kuliner', kuliah: 'Psikologi, Komunikasi, Keguruan (FKIP), Hubungan Internasional' },
+  E: { sma: 'Fokus Mapel Pilihan: Ekonomi, Sosiologi, Geografi', smk: 'Bisnis Daring, Pemasaran, Perhotelan, Tata Boga', kuliah: 'Manajemen, Bisnis, Hukum, Ilmu Politik, Humas' },
+  C: { sma: 'Fokus Mapel Pilihan: Ekonomi, Matematika, Informatika', smk: 'Akuntansi, Otomatisasi Perkantoran, Perbankan Syariah', kuliah: 'Akuntansi, Statistika, Administrasi Negara, Manajemen Informasi' }
+};
+
+// --- DATA SOAL SIMPLE (Varian 1) ---
+const QUESTIONS_SIMPLE = [
+  { id: 1, category: 'R', text: 'Saya suka memperbaiki alat elektronik atau mesin yang rusak.' },
+  { id: 2, category: 'I', text: 'Saya penasaran bagaimana cara kerja alam semesta atau eksperimen sains.' },
+  { id: 3, category: 'A', text: 'Saya suka menggambar, menulis cerita, atau bermain musik.' },
+  { id: 4, category: 'S', text: 'Saya senang membantu teman yang sedang kesulitan atau mengajar adik kelas.' },
+  { id: 5, category: 'E', text: 'Saya suka menjadi ketua kelompok dan meyakinkan orang lain.' },
+  { id: 6, category: 'C', text: 'Saya suka membuat jadwal harian yang rapi dan mencatat pengeluaran uang.' },
+  { id: 7, category: 'R', text: 'Saya lebih suka kegiatan luar ruangan (outdoor) dibanding duduk di meja.' },
+  { id: 8, category: 'I', text: 'Saya suka memecahkan teka-teki logika atau bermain catur.' },
+  { id: 9, category: 'A', text: 'Saya suka mendesain poster, baju, atau mendekorasi ruangan.' },
+  { id: 10, category: 'S', text: 'Saya tertarik mempelajari psikologi manusia atau cara mengajar yang baik.' },
+  { id: 11, category: 'E', text: 'Saya tertarik untuk menjual produk atau memulai bisnis sendiri.' },
+  { id: 12, category: 'C', text: 'Saya teliti dalam melihat kesalahan penulisan atau perhitungan angka.' }
+];
+
+// --- DATA PETA KARIR UPDATED (Varian 3) ---
+// Update: Profesi modern, Gaji based on avg UMR (3.5jt - 4.5jt base)
+const CAREER_DETAILS = {
+  R: { 
+    roles: ['Teknisi Robotik/IoT', 'Ahli Agronomi Modern', 'Network Engineer', 'Insinyur Sipil', 'Chef/Culinary'],
+    skills: ['Pengoperasian Mesin', 'Pemahaman Teknis', 'Fisik & Stamina', 'Safety Awareness'], 
+    soft: ['Ketelitian', 'Fokus', 'Mandiri', 'Praktis'], 
+    salary: 'Rp 3.5jt - 8jt+' 
+  },
+  I: { 
+    roles: ['Data Analyst/Scientist', 'Software Developer', 'Apoteker/Farmasi', 'Peneliti Medis', 'Cyber Security'],
+    skills: ['Analisis Data (SQL/Python)', 'Logika Pemrograman', 'Riset Ilmiah', 'Matematika'], 
+    soft: ['Berpikir Kritis', 'Rasa Ingin Tahu', 'Problem Solving', 'Skeptis'], 
+    salary: 'Rp 4.5jt - 12jt+' 
+  },
+  A: { 
+    roles: ['UI/UX Designer', 'Content Creator', 'Arsitek', 'Copywriter/Scriptwriter', 'Video Editor'],
+    skills: ['Desain (Figma/Adobe)', 'Video Editing', 'Creative Writing', 'Estetika Visual'], 
+    soft: ['Imajinasi', 'Ekspresi Diri', 'Adaptabilitas', 'Originalitas'], 
+    salary: 'Rp 3.5jt - 10jt+' 
+  },
+  S: { 
+    roles: ['Guru/Dosen', 'Psikolog/HRD', 'Perawat', 'Customer Success', 'Social Worker'],
+    skills: ['Public Speaking', 'Konseling', 'Manajemen Kelas', 'P3K/Medis Dasar'], 
+    soft: ['Empati', 'Komunikasi', 'Kesabaran', 'Pendengar Baik'], 
+    salary: 'Rp 3.5jt - 7jt+' 
+  },
+  E: { 
+    roles: ['Digital Marketer', 'Product Manager', 'Entrepreneur', 'Sales Manager', 'Lawyer'],
+    skills: ['SEO/SEM', 'Strategi Bisnis', 'Public Relations', 'Negosiasi'], 
+    soft: ['Leadership', 'Persuasif', 'Percaya Diri', 'Ambisus'], 
+    salary: 'Rp 4jt - Unlimited (Komisi)' 
+  },
+  C: { 
+    roles: ['Akuntan/Auditor', 'Data Entry Specialist', 'Admin Legal', 'Bankir', 'Quality Control'],
+    skills: ['Excel (Advanced)', 'Sistem Akuntansi', 'Manajemen Arsip', 'Audit'], 
+    soft: ['Organisasi', 'Disiplin', 'Detail Oriented', 'Jujur'], 
+    salary: 'Rp 4jt - 9jt+' 
+  }
+};
+
+// --- SUB-APPLICATIONS (VARIANTS) ---
+
+// VARIAN 1: SIMPLE ASSESSMENT
+const VariantSimple = ({ onBack }) => {
+  const [step, setStep] = useState('intro');
+  const [answers, setAnswers] = useState({});
+  const [idx, setIdx] = useState(0);
+
+  const handleAnswer = (val) => {
+    const q = QUESTIONS_SIMPLE[idx];
+    setAnswers(prev => ({ ...prev, [q.category]: (prev[q.category] || 0) + val }));
+    if (idx < QUESTIONS_SIMPLE.length - 1) setIdx(idx + 1);
+    else { setStep('analyzing'); setTimeout(() => setStep('result'), 1500); }
+  };
+
+  if (step === 'intro') {
+    return (
+      <div className="max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-xl p-8 text-center mt-10">
+        <button onClick={onBack} className="flex items-center text-gray-400 hover:text-gray-600 mb-4">
+          <ArrowLeft size={16} className="mr-1"/> Menu Utama
+        </button>
+        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <PenTool className="w-8 h-8 text-indigo-600" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">Tes Minat Sederhana</h1>
+        <p className="text-gray-600 mb-8">Versi klasik untuk siswa. Cepat, mudah, dan fokus pada hasil rekomendasi.</p>
+        <button onClick={() => setStep('quiz')} className="bg-indigo-600 text-white py-3 px-8 rounded-full hover:bg-indigo-700">Mulai Tes</button>
+      </div>
+    );
+  }
+
+  if (step === 'quiz') {
+    const q = QUESTIONS_SIMPLE[idx];
+    return (
+      <div className="max-w-xl mx-auto mt-10 bg-white rounded-2xl shadow-lg p-8">
+        <div className="text-sm text-gray-500 mb-2">Pertanyaan {idx + 1}/{QUESTIONS_SIMPLE.length}</div>
+        <h2 className="text-2xl font-bold text-center mb-8">"{q.text}"</h2>
+        <div className="space-y-3">
+          <button onClick={() => handleAnswer(3)} className="w-full p-4 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 font-medium text-left">Sangat Suka</button>
+          <button onClick={() => handleAnswer(2)} className="w-full p-4 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 font-medium text-left">Biasa Saja</button>
+          <button onClick={() => handleAnswer(1)} className="w-full p-4 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 font-medium text-left">Tidak Suka</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'analyzing') return <div className="text-center mt-20"><RefreshCcw className="animate-spin inline text-indigo-600"/> <p>Menganalisis...</p></div>;
+
+  if (step === 'result') {
+    const scores = Object.entries(answers).sort((a,b) => b[1] - a[1]);
+    const primary = scores[0][0];
+    const data = CATEGORIES[primary];
+    const recs = RECOMMENDATIONS[primary];
+
+    return (
+      <div className="max-w-2xl mx-auto mt-10 bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className={`${data.color.split(' ')[0]} p-8 text-center`}>
+          <h2 className="text-2xl font-bold">{data.label}</h2>
+          <p className="mt-2 opacity-90">{data.desc}</p>
+        </div>
+        <div className="p-8 space-y-4">
+          <div className="bg-gray-50 p-4 rounded-lg border"><strong>SMA:</strong> {recs.sma}</div>
+          <div className="bg-gray-50 p-4 rounded-lg border"><strong>SMK:</strong> {recs.smk}</div>
+          <div className="bg-gray-50 p-4 rounded-lg border"><strong>Kuliah:</strong> {recs.kuliah}</div>
+          <button onClick={onBack} className="w-full mt-4 py-3 border border-gray-300 rounded-lg">Kembali ke Menu</button>
+        </div>
+      </div>
+    );
+  }
+};
+
+// VARIAN 2: SPK TEACHER MODE
+const VariantSPK = ({ onBack }) => {
+  const [weightGrades, setWeightGrades] = useState(60);
+  const [weightInterest, setWeightInterest] = useState(40);
+  const [quota, setQuota] = useState(3);
+  
+  const DUMMY_STUDENTS = [
+    { id: 1, nama: 'Budi S.', nilaiRapor: 85, minat: 'R', pilihan: 'Teknik' },
+    { id: 2, nama: 'Siti A.', nilaiRapor: 92, minat: 'I', pilihan: 'Kesehatan' },
+    { id: 3, nama: 'Andi P.', nilaiRapor: 75, minat: 'A', pilihan: 'Teknik' },
+    { id: 4, nama: 'Dewi L.', nilaiRapor: 88, minat: 'S', pilihan: 'Sosial' },
+    { id: 5, nama: 'Eko W.', nilaiRapor: 60, minat: 'R', pilihan: 'Teknik' },
+  ];
+
+  const results = DUMMY_STUDENTS.map(s => {
+    let match = false;
+    if (s.pilihan === 'Teknik' && s.minat === 'R') match = true;
+    if (s.pilihan === 'Kesehatan' && s.minat === 'I') match = true;
+    if (s.pilihan === 'Sosial' && s.minat === 'S') match = true;
+    const iScore = match ? 100 : 50;
+    const final = (s.nilaiRapor * (weightGrades/100)) + (iScore * (weightInterest/100));
+    return { ...s, match, final };
+  }).sort((a,b) => b.final - a.final);
+
+  return (
+    <div className="max-w-5xl mx-auto mt-6 bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-emerald-600 p-4 text-white flex justify-between items-center">
+        <h2 className="font-bold flex items-center gap-2"><Settings size={20}/> Dashboard Seleksi Siswa (SPK)</h2>
+        <button onClick={onBack} className="text-sm bg-emerald-700 px-3 py-1 rounded hover:bg-emerald-800">Keluar</button>
+      </div>
+      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <h3 className="font-bold mb-2 text-sm text-gray-500">BOBOT NILAI RAPOR: {weightGrades}%</h3>
+            <input type="range" className="w-full accent-emerald-600" min="0" max="100" value={weightGrades} onChange={(e) => {
+              setWeightGrades(parseInt(e.target.value));
+              setWeightInterest(100 - parseInt(e.target.value));
+            }} />
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <h3 className="font-bold mb-2 text-sm text-gray-500">BOBOT MINAT: {weightInterest}%</h3>
+            <div className="w-full bg-gray-200 h-2 rounded"><div style={{width: `${weightInterest}%`}} className="bg-indigo-500 h-full rounded"></div></div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg border">
+             <h3 className="font-bold mb-2 text-sm text-gray-500">KUOTA: {quota}</h3>
+             <div className="flex gap-2">
+               <button onClick={()=>setQuota(q=>Math.max(1, q-1))} className="px-3 py-1 bg-white border rounded">-</button>
+               <button onClick={()=>setQuota(q=>q+1)} className="px-3 py-1 bg-white border rounded">+</button>
+             </div>
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">Rank</th>
+                <th className="p-2 text-left">Nama</th>
+                <th className="p-2 text-center">Rapor</th>
+                <th className="p-2 text-center">Minat</th>
+                <th className="p-2 text-center">Skor</th>
+                <th className="p-2 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((s, i) => (
+                <tr key={s.id} className="border-b hover:bg-gray-50">
+                  <td className="p-2 font-bold text-gray-500">#{i+1}</td>
+                  <td className="p-2">{s.nama} <span className="text-xs text-gray-400">({s.minat})</span></td>
+                  <td className="p-2 text-center">{s.nilaiRapor}</td>
+                  <td className="p-2 text-center text-xs">{s.match ? '✅ Cocok' : '❌ Tidak'}</td>
+                  <td className="p-2 text-center font-bold text-emerald-600">{s.final.toFixed(1)}</td>
+                  <td className="p-2 text-center">
+                    {(i < quota) ? 
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">Diterima</span> : 
+                      <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs">Waiting</span>
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// VARIAN 3: CAREER EXPLORER (UPDATED CONTENT)
+const VariantExplorer = ({ onBack }) => {
+  const [result, setResult] = useState(null); 
+  const simulateResult = (type) => setResult(type);
+
+  if (!result) {
+    return (
+      <div className="max-w-4xl mx-auto mt-10 p-6">
+        <button onClick={onBack} className="mb-4 text-gray-500 hover:text-black">← Kembali</button>
+        <h1 className="text-3xl font-bold mb-2 text-purple-700">Peta Karir Interaktif</h1>
+        <p className="mb-8 text-gray-600">Pilih salah satu tipe karakter untuk melihat detail skill & profesi modern.</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {Object.entries(CATEGORIES).map(([key, data]) => (
+            <div key={key} onClick={() => simulateResult(key)} className="bg-white p-6 rounded-xl shadow cursor-pointer hover:shadow-lg hover:scale-105 transition-all border border-purple-100">
+              <div className="text-purple-600 mb-2">{data.icon}</div>
+              <h3 className="font-bold text-gray-800">{data.label}</h3>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const details = CAREER_DETAILS[result];
+  const basic = CATEGORIES[result];
+
+  return (
+    <div className="max-w-4xl mx-auto mt-6 bg-white rounded-2xl shadow-xl overflow-hidden font-sans">
+      <div className="bg-purple-600 p-8 text-white relative overflow-hidden">
+        <button onClick={() => setResult(null)} className="absolute top-4 left-4 text-white/80 hover:text-white bg-black/20 px-3 py-1 rounded-full text-sm">← Pilih Tipe Lain</button>
+        <div className="relative z-10 mt-4">
+          <h2 className="text-sm font-medium opacity-80 uppercase tracking-wider">Jalur Karir Masa Depan</h2>
+          <h1 className="text-4xl font-bold mb-2">{basic.label}</h1>
+          <p className="opacity-90 max-w-lg">{basic.desc}</p>
+        </div>
+        <div className="absolute -right-10 -bottom-10 text-purple-400 opacity-30">
+          {React.cloneElement(basic.icon, { size: 200 })}
+        </div>
+      </div>
+      <div className="p-8">
+        
+        {/* Profesi Modern */}
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Target className="text-red-500"/> Profesi Paling Relevan Saat Ini
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {details.roles.map((role, i) => (
+              <span key={i} className="px-4 py-2 bg-gray-100 rounded-full text-gray-700 text-sm font-medium border border-gray-200">
+                {role}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Brain className="text-purple-600"/> Hard Skills (Teknis)</h3>
+            <ul className="space-y-3">{details.skills.map((skill, i) => (<li key={i} className="flex items-center gap-3 bg-purple-50 p-3 rounded-lg text-purple-900 text-sm font-medium"><div className="w-2 h-2 rounded-full bg-purple-500"></div> {skill}</li>))}</ul>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Lightbulb className="text-yellow-500"/> Soft Skills (Karakter)</h3>
+            <ul className="space-y-3">{details.soft.map((skill, i) => (<li key={i} className="flex items-center gap-3 bg-yellow-50 p-3 rounded-lg text-yellow-800 text-sm font-medium"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> {skill}</li>))}</ul>
+          </div>
+        </div>
+        
+        <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h4 className="text-green-800 font-bold text-sm uppercase flex items-center gap-2">
+                <TrendingUp size={16}/> Estimasi Gaji Awal (Fresh Grad)
+              </h4>
+              <p className="text-3xl font-bold text-green-700 mt-1">{details.salary}</p>
+            </div>
+            <div className="h-14 w-14 bg-green-200 rounded-full flex items-center justify-center text-green-700 shadow-sm">
+              <DollarSign size={28}/>
+            </div>
+          </div>
+          <p className="text-xs text-green-600 italic mt-2 border-t border-green-200 pt-2">
+            *Rentang gaji berdasarkan rata-rata UMR/UMP Nasional untuk tenaga terampil (Batas bawah ~Rp 3.5jt - Rp 4.5jt) hingga standar industri swasta nasional. Angka bisa bervariasi tergantung lokasi daerah dan jenis perusahaan.
+          </p>
+        </div>
+        
+        <button onClick={onBack} className="mt-8 w-full py-4 text-center text-gray-500 hover:bg-gray-50 rounded-lg">Kembali ke Menu Utama</button>
+      </div>
+    </div>
+  );
+};
+
+// --- VARIAN 4: ASESMEN LENGKAP & CETAK PDF ---
+
+const QUESTIONS_FULL = [
+  // REALISTIC (R)
+  { category: 'R', text: 'Saya suka bekerja menggunakan peralatan berat atau mesin.' },
+  { category: 'R', text: 'Saya lebih suka bekerja di luar ruangan daripada di dalam kantor.' },
+  { category: 'R', text: 'Saya bisa memperbaiki barang-barang elektronik sederhana.' },
+  { category: 'R', text: 'Saya suka berkebun atau merawat hewan.' },
+  { category: 'R', text: 'Saya suka olahraga fisik atau kegiatan atletik.' },
+  { category: 'R', text: 'Saya lebih suka pelajaran praktik daripada teori.' },
+  
+  // INVESTIGATIVE (I)
+  { category: 'I', text: 'Saya suka membaca buku tentang sains atau penemuan baru.' },
+  { category: 'I', text: 'Saya suka memecahkan teka-teki logika atau matematika.' },
+  { category: 'I', text: 'Saya ingin tahu bagaimana proses terjadinya hujan atau fenomena alam.' },
+  { category: 'I', text: 'Saya suka melakukan eksperimen di laboratorium.' },
+  { category: 'I', text: 'Saya kritis terhadap informasi yang belum jelas sumbernya.' },
+  { category: 'I', text: 'Saya suka menganalisis data atau grafik.' },
+
+  // ARTISTIC (A)
+  { category: 'A', text: 'Saya bisa mengekspresikan diri melalui gambar, lukisan, atau sketsa.' },
+  { category: 'A', text: 'Saya suka menulis puisi, cerpen, atau lirik lagu.' },
+  { category: 'A', text: 'Saya suka menonton pertunjukan seni atau mengunjungi museum.' },
+  { category: 'A', text: 'Saya memiliki gaya berpakaian yang unik atau berbeda.' },
+  { category: 'A', text: 'Saya suka mendekorasi kamar atau ruangan.' },
+  { category: 'A', text: 'Saya lebih suka bekerja tanpa aturan yang terlalu kaku.' },
+
+  // SOCIAL (S)
+  { category: 'S', text: 'Saya mudah bergaul dan mencari teman baru.' },
+  { category: 'S', text: 'Saya suka menjadi pendengar curhat teman.' },
+  { category: 'S', text: 'Saya tertarik menjadi relawan untuk kegiatan sosial.' },
+  { category: 'S', text: 'Saya suka mengajari orang lain melakukan sesuatu.' },
+  { category: 'S', text: 'Saya menghindari konflik dan lebih suka kedamaian.' },
+  { category: 'S', text: 'Saya peduli dengan perasaan orang lain.' },
+
+  // ENTERPRISING (E)
+  { category: 'E', text: 'Saya suka memimpin kelompok dalam tugas sekolah.' },
+  { category: 'E', text: 'Saya berani berbicara di depan umum.' },
+  { category: 'E', text: 'Saya suka tawar-menawar saat membeli barang.' },
+  { category: 'E', text: 'Saya punya ide bisnis atau cara menghasilkan uang.' },
+  { category: 'E', text: 'Saya suka membujuk orang lain untuk mengikuti ide saya.' },
+  { category: 'E', text: 'Saya ambisius dan ingin menjadi orang sukses.' },
+
+  // CONVENTIONAL (C)
+  { category: 'C', text: 'Saya suka segala sesuatu tersusun rapi dan teratur.' },
+  { category: 'C', text: 'Saya suka membuat daftar rencana kegiatan (To-Do List).' },
+  { category: 'C', text: 'Saya teliti dalam menghitung uang kembalian.' },
+  { category: 'C', text: 'Saya suka mengikuti instruksi yang jelas langkah-demi-langkah.' },
+  { category: 'C', text: 'Saya tidak suka perubahan rencana yang mendadak.' },
+  { category: 'C', text: 'Saya suka mengarsipkan dokumen atau menata buku.' }
+];
+
+// Helper: Generasi Narasi Personal (Human Friendly)
+const generateAnalysis = (primary, secondary) => {
+  const primaryData = CATEGORIES[primary];
+  const secondaryData = CATEGORIES[secondary];
+
+  return `Berdasarkan hasil asesmen, kamu memiliki pola minat yang unik. Kekuatan terbesarmu ada pada tipe **${primaryData.label}**. 
+  Ini berarti kamu cenderung memiliki energi alami saat ${primaryData.desc.toLowerCase()} 
+  
+  Namun, kamu tidak hanya satu dimensi. Kamu juga memiliki sisi **${secondaryData.label}** yang cukup kuat. 
+  Kombinasi ini menarik karena kamu bisa menyeimbangkan antara fokus utama dengan kemampuan pendukung dari tipe kedua.
+  
+  **Saran Pengambilan Keputusan:**
+  Jangan merasa tertekan untuk memilih satu jalur yang "sempurna". Gunakan hasil ini sebagai kompas. 
+  Jika kamu memilih lanjut kuliah atau bekerja, carilah lingkungan yang menghargai kemampuanmu dalam ${primaryData.desc.split(',')[0].toLowerCase()}. 
+  Hasil ini bukan vonis, melainkan cermin potensi yang bisa kamu asah lebih jauh.`;
+};
+
+const VariantFullAssessment = ({ onBack }) => {
+  const [step, setStep] = useState('identity'); // identity, quiz, result
+  const [user, setUser] = useState({ name: '', date: '' });
+  const [answers, setAnswers] = useState({});
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const today = new Date().toLocaleDateString('id-ID', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    setUser(u => ({ ...u, date: today }));
+  }, []);
+
+  const handleStartQuiz = (e) => {
+    e.preventDefault();
+    if (user.name.trim()) setStep('quiz');
+  };
+
+  const handleAnswer = (val) => {
+    const q = QUESTIONS_FULL[idx];
+    setAnswers(prev => ({ ...prev, [q.category]: (prev[q.category] || 0) + val }));
+    if (idx < QUESTIONS_FULL.length - 1) setIdx(idx + 1);
+    else setStep('result');
+  };
+
+  const handlePrint = () => window.print();
+
+  // --- SCREEN: IDENTITY ---
+  if (step === 'identity') {
+    return (
+      <div className="max-w-xl w-full mx-auto bg-white rounded-2xl shadow-xl p-8 mt-10">
+        <button onClick={onBack} className="text-gray-400 hover:text-gray-600 mb-6 flex items-center gap-1">
+          <ArrowLeft size={16}/> Menu Utama
+        </button>
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+            <FileText size={32}/>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800">Asesmen Lengkap & Laporan</h1>
+          <p className="text-gray-500">Hasil tes dapat diunduh/dicetak sebagai PDF.</p>
+        </div>
+        
+        <form onSubmit={handleStartQuiz} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Siswa</label>
+            <input 
+              required
+              type="text" 
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Masukkan nama Anda..."
+              value={user.name}
+              onChange={(e) => setUser({...user, name: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Asesmen</label>
+            <input 
+              disabled
+              type="text" 
+              className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+              value={user.date}
+            />
+          </div>
+          <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+            Lanjut ke Soal
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // --- SCREEN: QUIZ ---
+  if (step === 'quiz') {
+    const q = QUESTIONS_FULL[idx];
+    const progress = ((idx + 1) / QUESTIONS_FULL.length) * 100;
+
+    return (
+      <div className="max-w-2xl mx-auto mt-10 bg-white rounded-2xl shadow-lg p-8">
+        <div className="flex justify-between text-sm text-gray-500 mb-2">
+          <span>Soal {idx + 1} dari {QUESTIONS_FULL.length}</span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
+          <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{width: `${progress}%`}}></div>
+        </div>
+
+        <h2 className="text-xl md:text-2xl font-bold text-center mb-8 text-gray-800 leading-relaxed">
+          "{q.text}"
+        </h2>
+
+        <div className="grid gap-3">
+          <button onClick={() => handleAnswer(3)} className="p-4 bg-green-50 border border-green-100 text-green-800 rounded-xl hover:bg-green-100 text-left font-medium transition-colors">
+            Sangat Setuju / Suka
+          </button>
+          <button onClick={() => handleAnswer(2)} className="p-4 bg-gray-50 border border-gray-100 text-gray-800 rounded-xl hover:bg-gray-100 text-left font-medium transition-colors">
+            Netral / Biasa Saja
+          </button>
+          <button onClick={() => handleAnswer(1)} className="p-4 bg-red-50 border border-red-100 text-red-800 rounded-xl hover:bg-red-100 text-left font-medium transition-colors">
+            Tidak Setuju / Tidak Suka
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- SCREEN: RESULT (PRINTABLE) ---
+  if (step === 'result') {
+    const scores = Object.entries(answers).map(([k,v]) => ({k,v})).sort((a,b) => b.v - a.v);
+    const primary = scores[0].k;
+    const secondary = scores[1].k;
+    const data = CATEGORIES[primary];
+    const recs = RECOMMENDATIONS[primary];
+    const maxVal = Math.max(...scores.map(s => s.v));
+    const analysisText = generateAnalysis(primary, secondary);
+
+    return (
+      <div className="max-w-4xl mx-auto mt-6">
+        
+        {/* Tombol Aksi */}
+        <div className="flex justify-between items-center mb-6 print:hidden">
+          <button onClick={onBack} className="text-gray-500 hover:text-black flex items-center gap-1">
+            <ArrowLeft size={18}/> Menu Utama
+          </button>
+          <button 
+            onClick={handlePrint} 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg"
+          >
+            <Printer size={18}/> Download / Cetak PDF
+          </button>
+        </div>
+
+        {/* AREA CETAK (Laporan) */}
+        <div className="bg-white p-10 rounded-xl shadow-xl print:shadow-none print:p-0 border border-gray-200 print:border-none print:w-full">
+          
+          {/* Header */}
+          <div className="text-center border-b-2 border-gray-800 pb-6 mb-8">
+            <h1 className="text-3xl font-extrabold text-gray-900 uppercase tracking-wider">Laporan Hasil Asesmen Minat</h1>
+            <p className="text-gray-500 mt-2">Sistem Informasi Pendidikan & Karir Indonesia</p>
+          </div>
+
+          {/* Info Siswa */}
+          <div className="flex justify-between mb-8 bg-gray-50 p-4 rounded-lg print:bg-transparent print:p-0 print:mb-6">
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold">Nama Siswa</p>
+              <p className="text-lg font-bold text-gray-900">{user.name}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase font-bold">Tanggal Tes</p>
+              <p className="text-lg font-bold text-gray-900">{user.date}</p>
+            </div>
+          </div>
+
+          {/* Analisis Personal (NEW) */}
+          <div className="mb-8 p-6 bg-blue-50 rounded-xl border border-blue-100 print:bg-gray-50 print:border-gray-200">
+            <h3 className="text-sm font-bold text-blue-800 uppercase mb-3 flex items-center gap-2">
+              <Info size={16}/> Analisis Personal
+            </h3>
+            <p className="text-gray-800 leading-relaxed whitespace-pre-line text-sm md:text-base">
+              {analysisText}
+            </p>
+          </div>
+
+          {/* Grafik & Hasil Utama */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div className={`p-6 rounded-xl border-l-8 ${data.border} bg-gray-50 print:bg-white print:border text-left`}>
+              <h3 className="text-xs font-bold text-gray-500 uppercase mb-1">Tipe Dominan</h3>
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-2">{data.label}</h2>
+              <p className="text-sm text-gray-700">"{data.desc}"</p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-gray-800 mb-3 text-sm uppercase">Peta Kekuatan Minat</h3>
+              <div className="space-y-2">
+                {scores.map((s) => (
+                  <div key={s.k} className="flex items-center gap-3 text-xs">
+                    <span className="w-6 font-bold text-gray-600">{s.k}</span>
+                    <div className="flex-1 bg-gray-200 h-3 rounded-full overflow-hidden print:border print:bg-white">
+                      <div 
+                        className={`h-full ${CATEGORIES[s.k].color.split(' ')[0]} print:bg-gray-800`} 
+                        style={{width: `${(s.v / maxVal) * 100}%`, minWidth: '5px'}}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Rekomendasi (UPDATED) */}
+          <div className="mb-8">
+            <h3 className="font-bold text-gray-800 mb-4 border-b pb-2">Rekomendasi Arah Pendidikan</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="border p-4 rounded-lg">
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">SMA (Kurikulum Merdeka)</p>
+                <p className="font-medium text-sm">{recs.sma}</p>
+              </div>
+              <div className="border p-4 rounded-lg">
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">SMK (Vokasi)</p>
+                <p className="font-medium text-sm">{recs.smk}</p>
+              </div>
+              <div className="border p-4 rounded-lg">
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">Rumpun Kuliah</p>
+                <p className="font-medium text-sm">{recs.kuliah}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Kamus RIASEC (NEW EDUKASI) */}
+          <div className="mb-8 mt-8 pt-8 border-t border-gray-200">
+            <h3 className="font-bold text-gray-800 mb-4 text-center">Kamus Kode Minat (Edukasi)</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {Object.entries(CATEGORIES).map(([key, cat]) => (
+                <div key={key} className="text-xs border p-2 rounded bg-gray-50 print:bg-white">
+                  <span className="font-bold text-indigo-900">{key} - {cat.label.split('(')[0]}</span>
+                  <p className="text-gray-600 mt-1 leading-tight">{cat.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer (UPDATED) */}
+          <div className="mt-10 text-center text-xs text-gray-400 print:text-gray-500">
+            <p>Hasil dari Prototipe Aplikasi Asesmen Minat Siswa</p>
+            <p className="mt-1">Dikembangkan sebagai alat bantu keputusan, bukan penentu mutlak masa depan.</p>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+};
+
+// --- MAIN APP (MENU UTAMA) ---
+
+export default function App() {
+  const [variant, setVariant] = useState('menu'); // 'menu', 'v1', 'v2', 'v3', 'v4'
+
+  if (variant === 'v1') return <VariantSimple onBack={() => setVariant('menu')} />;
+  if (variant === 'v2') return <VariantSPK onBack={() => setVariant('menu')} />;
+  if (variant === 'v3') return <VariantExplorer onBack={() => setVariant('menu')} />;
+  if (variant === 'v4') return <VariantFullAssessment onBack={() => setVariant('menu')} />;
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans p-6">
+      
+      {/* Header */}
+      <div className="max-w-5xl mx-auto mb-10 text-center pt-10">
+        <h1 className="text-4xl font-extrabold text-slate-800 mb-4">Portal Asesmen Pendidikan</h1>
+        <p className="text-slate-500 text-lg">Pilih mode aplikasi sesuai kebutuhan Anda.</p>
+      </div>
+
+      {/* Menu Grid */}
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Card V1 */}
+        <div onClick={() => setVariant('v1')} className="bg-white rounded-2xl p-6 shadow hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border-t-4 border-indigo-500 group flex flex-col h-full">
+          <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            <LayoutGrid size={24} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Mode Cepat</h2>
+          <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">
+            Versi klasik & cepat. Tanpa login, langsung tes dan lihat hasil rekomendasi.
+          </p>
+          <span className="text-indigo-600 font-medium text-xs flex items-center gap-1">Buka <ArrowRight size={12}/></span>
+        </div>
+
+        {/* Card V2 */}
+        <div onClick={() => setVariant('v2')} className="bg-white rounded-2xl p-6 shadow hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border-t-4 border-emerald-500 group flex flex-col h-full">
+          <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <Settings size={24} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Mode Guru (SPK)</h2>
+          <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">
+            Manajemen seleksi siswa. Mengatur kuota dan bobot nilai rapor vs minat.
+          </p>
+          <span className="text-emerald-600 font-medium text-xs flex items-center gap-1">Dashboard <ArrowRight size={12}/></span>
+        </div>
+
+        {/* Card V3 */}
+        <div onClick={() => setVariant('v3')} className="bg-white rounded-2xl p-6 shadow hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border-t-4 border-purple-500 group flex flex-col h-full">
+          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+            <Map size={24} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Peta Karir</h2>
+          <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">
+            Visualisasi jenjang karir, hard/soft skill, dan estimasi gaji masa depan.
+          </p>
+          <span className="text-purple-600 font-medium text-xs flex items-center gap-1">Jelajahi <ArrowRight size={12}/></span>
+        </div>
+
+        {/* Card V4 */}
+        <div onClick={() => setVariant('v4')} className="bg-white rounded-2xl p-6 shadow hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border-t-4 border-blue-500 group flex flex-col h-full relative overflow-hidden">
+          <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse">BARU</div>
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <FileText size={24} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Laporan Lengkap</h2>
+          <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">
+            Fitur cetak PDF, analisis personal mendalam, dan rekomendasi Kurikulum Merdeka.
+          </p>
+          <span className="text-blue-600 font-medium text-xs flex items-center gap-1">Mulai Tes <ArrowRight size={12}/></span>
+        </div>
+
+      </div>
+
+      <div className="max-w-5xl mx-auto mt-12 text-center text-sm text-gray-400">
+        &copy; 2024 Sistem Asesmen Terpadu - Dikembangkan untuk Pendidikan Indonesia
+      </div>
+
+    </div>
+  );
+}
